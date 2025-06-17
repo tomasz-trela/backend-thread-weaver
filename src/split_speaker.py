@@ -1,15 +1,19 @@
 from pprint import pprint
-import numpy as np
+
+import torch
+import whisper
+from pyannote.audio import Pipeline
+
+import env
 
 file = "braun_10.mp3"
-
-from pyannote.audio import Pipeline
 pipeline = Pipeline.from_pretrained(
     "pyannote/speaker-diarization-3.1",
-    use_auth_token="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")
+    use_auth_token=env.SPEAKER_DIARIZATION_TOKEN,
+)
 
 # send pipeline to GPU (when available)
-import torch
+
 pipeline.to(torch.device("cuda"))
 
 # apply pretrained pipeline
@@ -38,16 +42,14 @@ for turn, _, speaker in diarization.itertracks(yield_label=True):
 pprint("Speaker segments:")
 pprint(speaker_data)
 
-import whisper
-
 model = whisper.load_model("turbo")
 result = model.transcribe(file)
 seg_delta = 0.3
 
-for segment in result['segments']:
-    segment_start = segment['start']
-    segment_end = segment['end']
-    segment_text = segment['text'].strip()
+for segment in result["segments"]:
+    segment_start = segment["start"]
+    segment_end = segment["end"]
+    segment_text = segment["text"].strip()
 
     # Find the speaker for this segment
     speaker = None
@@ -57,15 +59,18 @@ for segment in result['segments']:
         if start - seg_delta <= segment_start and segment_end <= end + seg_delta:
             matches.append((start, end, spk))
 
-
     if len(matches) > 0:
         speaker = matches[0][2]  # Take the first matching speaker
         if len(matches) > 1:
-            print(f"Warning: Multiple speakers found for segment [{segment_start:.2f}s - {segment_end:.2f}s]. Using the first one: {speaker}")
-
-
+            print(
+                f"Warning: Multiple speakers found for segment [{segment_start:.2f}s - {segment_end:.2f}s]. Using the first one: {speaker}"
+            )
 
     if speaker:
-        print(f"[{segment_start:.2f}s - {segment_end:.2f}s] Speaker: {speaker}, Text: {segment_text}")
+        print(
+            f"[{segment_start:.2f}s - {segment_end:.2f}s] Speaker: {speaker}, Text: {segment_text}"
+        )
     else:
-        print(f"[{segment_start:.2f}s - {segment_end:.2f}s] No speaker found, Text: {segment_text}")
+        print(
+            f"[{segment_start:.2f}s - {segment_end:.2f}s] No speaker found, Text: {segment_text}"
+        )

@@ -1,11 +1,3 @@
-import json
-
-
-def load_json(file_path):
-    with open(file_path, "r", encoding="utf8") as f:
-        return json.load(f)
-
-
 def seconds_to_time(seconds):
     """Convert seconds to a formatted time string."""
     hours = int(seconds // 3600)
@@ -174,13 +166,7 @@ def numerate_speakers(segments):
             segment["speaker"] = int(segment["speaker"].split("_")[-1])
 
 
-def get_segments(dataset_filename):
-    speaker_file = f"../dataset/{dataset_filename}_speaker_segments.json"
-    whisper_file = f"../dataset/{dataset_filename}_whisper_segments.json"
-
-    speaker_data = load_json(speaker_file)
-    whisper_data = load_json(whisper_file)
-
+def get_segments(speaker_data, whisper_data):
     combined_segments, no_speaker = combine_segments(
         speaker_data, whisper_data, min_overlap_ratio=0.05, verbose=False
     )
@@ -190,22 +176,22 @@ def get_segments(dataset_filename):
     return combined_segments
 
 
-if __name__ == "__main__":
-    speaker_file = "../dataset/mentzen-trzask_speaker_segments.json"
-    whisper_file = "../dataset/mentzen-trzask_whisper_segments.json"
+# if __name__ == "__main__":
+# speaker_file = "../dataset/mentzen-trzask_speaker_segments.json"
+# whisper_file = "../dataset/mentzen-trzask_whisper_segments.json"
 
-    speaker_data = load_json(speaker_file)
-    whisper_data = load_json(whisper_file)
+# speaker_data = load_json(speaker_file)
+# whisper_data = load_json(whisper_file)
 
-    test_different_settings(speaker_data, whisper_data)
+# test_different_settings(speaker_data, whisper_data)
 
-    # combined_segments, no_speaker = combine_segments(
-    #     speaker_data, whisper_data, min_overlap_ratio=0.05, verbose=False)
-    # # print_combined_segments(combined_segments)
-    # combined_segments = change_speaker_name(combined_segments, "SPEAKER_00", "MENTZEN")
-    # combined_segments = change_speaker_name(combined_segments, "SPEAKER_01", "TRZASKOWSKI")
-    # save_combined_segments_as_srt(combined_segments, "../srt/mentzen-trzask_combined_segments.srt")
+# combined_segments, no_speaker = combine_segments(
+#     speaker_data, whisper_data, min_overlap_ratio=0.05, verbose=False)
+# # print_combined_segments(combined_segments)
+# combined_segments = change_speaker_name(combined_segments, "SPEAKER_00", "MENTZEN")
+# combined_segments = change_speaker_name(combined_segments, "SPEAKER_01", "TRZASKOWSKI")
+# save_combined_segments_as_srt(combined_segments, "../srt/mentzen-trzask_combined_segments.srt")
 
-    # simplified_whisper_data = simplify_whisper_segments(whisper_data)
-    # with open("../dataset/mentzen-trzask_simplified_whisper_segments.json", "w") as f:
-    #     json.dump(simplified_whisper_data, f, indent=4)
+# simplified_whisper_data = simplify_whisper_segments(whisper_data)
+# with open("../dataset/mentzen-trzask_simplified_whisper_segments.json", "w") as f:
+#     json.dump(simplified_whisper_data, f, indent=4)

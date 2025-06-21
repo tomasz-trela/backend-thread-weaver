@@ -2,7 +2,7 @@ import torch
 import whisper
 from pyannote.audio import Pipeline
 
-from config import settings
+from .config import settings
 
 file = "braun_full.mp3"
 file_without_ext = file.rsplit(".", 1)[0]

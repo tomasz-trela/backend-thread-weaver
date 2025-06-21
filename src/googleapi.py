@@ -1,7 +1,7 @@
 from google import genai
 from google.genai.types import EmbedContentConfig
 
-from config import settings
+from .config import settings
 
 client = genai.Client(api_key=settings.GOOGLE_AI_STUDIO_API_KEY)
 

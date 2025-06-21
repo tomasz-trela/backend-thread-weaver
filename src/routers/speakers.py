@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-from db import Speaker
-from typedefs import SessionDep
+from ..db import Speaker
+from ..typedefs import SessionDep
 
 
 router = APIRouter(prefix="/speakers", tags=["speakers"])

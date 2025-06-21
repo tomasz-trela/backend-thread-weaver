@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from routers import conversations, speakers
+from . import conversations, speakers
 
 router = APIRouter(prefix="/api", tags=["API"])
 

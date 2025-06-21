@@ -13,7 +13,7 @@ from sqlmodel import (
     text,
 )
 
-from config import settings
+from .config import settings
 
 engine = create_engine(
     f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_SERVER}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}",
@@ -70,20 +70,31 @@ def init_db():
 
 
 def similarity_search(
-    query_embedding: list[float], session: Session
+    query_embedding: list[float], limit: int, speaker_id: int, session: Session
 ) -> list[Utterance]:
-    results = session.exec(
+    stmt = (
         select(Utterance)
         .join(Speaker)
         .order_by(Utterance.embedding.cosine_distance(query_embedding))
-    ).all()
+    )
 
+    if speaker_id is not None:
+        stmt = stmt.where(Utterance.speaker_id == speaker_id)
+
+    if limit is not None:
+        stmt = stmt.limit(limit)
+
+    results = session.exec(stmt).all()
     return results
 
 
-def full_text_search(query: str, session: Session) -> list[Utterance]:
-    language = "simple"
-
+def full_text_search(
+    query: str,
+    limit: int,
+    language: str,
+    speaker_id: int,
+    session: Session,
+) -> list[Utterance]:
     stmt = (
         select(
             Utterance,
@@ -104,6 +115,12 @@ def full_text_search(query: str, session: Session) -> list[Utterance]:
             ).desc()
         )
     )
+
+    if speaker_id is not None:
+        stmt = stmt.where(Utterance.speaker_id == speaker_id)
+
+    if limit is not None:
+        stmt = stmt.limit(limit)
 
     utterances = []
     for utterance, rank in session.exec(stmt).all():

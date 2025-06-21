@@ -2,7 +2,7 @@ import asyncio
 import json
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Form, UploadFile
 
 from sqlmodel import select
 
@@ -116,8 +116,8 @@ async def get_similarity_search(
 async def get_full_text(
     query: str,
     session: SessionDep,
-    limit: Optional[int] = None,
-    language: Optional[str] = "polish",
+    limit: Optional[int] = 20,
+    language: Optional[str] = "simple",
     speaker_id: Optional[int] = None,
 ):
     results = full_text_search(query, limit, language, speaker_id, session)
@@ -154,3 +154,75 @@ async def get_speakers(conversation_id: int, session: SessionDep) -> Any:
     ).all()
 
     return speakers
+
+
+@router.get("/hybrid-search", response_model=list[UtteranceDTO])
+async def get_hybrid_search(
+    query: str,
+    session: SessionDep,
+    limit: Optional[int] = 20,
+    speaker_id: Optional[int] = None,
+    language: Optional[str] = "simple",
+    rrf_k: int = 60,
+):
+    """
+    Use a low rrf_k when:
+        - You have very high confidence in your individual searchers.
+        - You believe the #1 result from either vector or FTS is highly likely to be the best answer.
+        - You want an "aggressive" fusion that prioritizes the top-ranked items above all else.
+    Performs a hybrid search by combining full-text and similarity search results
+    using Reciprocal Rank Fusion (RRF).
+
+    Use a high rrf_k when:
+        - You want to balance the influence of both keyword and semantic search.
+        - You believe that documents relevant to both search methods are more valuable than documents that are only relevant to one.
+        - You want a more stable and robust ranking that is less sensitive to small changes in the top ranks of individual searchers. This is why it's a good default.
+
+    Basic rrf_k values:
+        - 60: Good default value, balances both search methods.
+        - 30: More aggressive, prioritizes top results from either method.
+        - 10: Very aggressive, only considers the top results from either method.
+        - 100: More conservative, gives more weight to lower-ranked results.
+        - 1000: Extremely conservative, considers a very wide range of results.
+    """
+    fetch_limit = limit * 2 if limit else 40
+
+    fts_results = full_text_search(query, fetch_limit, language, speaker_id, session)
+
+    query_embedding = get_embeddings([query]).embeddings[0].values
+    sim_results = similarity_search(query_embedding, fetch_limit, speaker_id, session)
+    fused_scores = {}
+    results_map = {}
+
+    for rank, utterance in enumerate(fts_results):
+        results_map[utterance.id] = utterance
+        fused_scores[utterance.id] = fused_scores.get(utterance.id, 0) + 1 / (
+            rrf_k + rank
+        )
+
+    for rank, utterance in enumerate(sim_results):
+        results_map[utterance.id] = utterance
+        fused_scores[utterance.id] = fused_scores.get(utterance.id, 0) + 1 / (
+            rrf_k + rank
+        )
+
+    sorted_ids = sorted(
+        fused_scores.keys(), key=lambda id: fused_scores[id], reverse=True
+    )
+
+    final_results = [results_map[id] for id in sorted_ids]
+
+    final_limited_results = final_results[:limit] if limit else final_results
+
+    return [
+        UtteranceDTO(
+            id=u.id,
+            start_time=u.start_time,
+            end_time=u.end_time,
+            text=u.text,
+            speaker_id=u.speaker_id,
+            conversation_id=u.conversation_id,
+            speaker=u.speaker.surname if u.speaker else None,
+        )
+        for u in final_limited_results
+    ]

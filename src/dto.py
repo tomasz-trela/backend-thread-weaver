@@ -13,20 +13,3 @@ class UtteranceDTO(BaseModel):
 
     class Config:
         orm_mode = True
-
-
-class ProcessRequest(BaseModel):
-    conversation_id: int
-    filename: str
-    segment: int
-    speakers: list[int]
-
-
-class ConversationRequest(BaseModel):
-    name: str
-    speakers: list[int]
-    description: Optional[str] = None
-    youtube_id: Optional[str] = None
-
-    class Config:
-        orm_mode = True

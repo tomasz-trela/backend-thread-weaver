@@ -2,7 +2,7 @@ import asyncio
 import json
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Form, UploadFile
+from fastapi import APIRouter, Form, HTTPException, UploadFile
 
 from sqlmodel import select
 
@@ -18,8 +18,11 @@ from ..db import (
     similarity_search,
 )
 from ..typedefs import SessionDep
+from ..transcription_service import TranscriptionService
 
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
+
+transcriptionService = TranscriptionService()
 
 
 async def load_json(upload_file: UploadFile):
@@ -27,6 +30,72 @@ async def load_json(upload_file: UploadFile):
     return json.loads(content.decode("utf8"))
 
 
+# I don't know if this is working
+@router.post("/audio")
+async def create_conversation_from_audio(
+    session: SessionDep,
+    audio_file: UploadFile,
+    name: str = Form(...),
+    speakers: List[int] = Form(...),
+    description: Optional[str] = Form(None),
+    youtube_id: Optional[str] = Form(None),
+) -> Conversation:
+    contents = await audio_file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="File is empty")
+
+    conversation = Conversation(
+        title=name.strip(),
+        description=description.strip() if description else None,
+        youtube_id=youtube_id.strip() if youtube_id else None,
+    )
+    session.add(conversation)
+    session.commit()
+    session.refresh(conversation)
+
+    speakers_list = session.exec(select(Speaker).where(Speaker.id.in_(speakers))).all()
+    if not speakers_list:
+        return {"error": "No valid speakers found for the conversation"}
+
+    speakers_dict = {
+        speaker_id: speaker for speaker_id, speaker in zip(speakers, speakers_list)
+    }
+
+    speaker_data, whisper_data = transcriptionService.transcribe_audio(contents)
+
+    segments = get_segments(speaker_data, whisper_data)
+
+    semaphore = asyncio.Semaphore(20)
+    # Limit concurrent embedding requests, due to resource exhaustion exception
+    # if you get an error try to chanege it
+
+    async def process_segment(segment):
+        async with semaphore:
+            embedding = await asyncio.to_thread(get_embeddings, [segment["text"]])
+
+            speaker_id = None
+            if segment["speaker"] != -1:
+                speaker_index = segment["speaker"]
+                speaker_id = speakers_dict.get(speakers[speaker_index]).id
+
+            return Utterance(
+                start_time=segment["start"],
+                end_time=segment["end"],
+                text=segment["text"],
+                embedding=embedding.embeddings[0].values,
+                conversation_id=conversation.id,
+                speaker_id=speaker_id,
+            )
+
+    tasks = [process_segment(segment) for segment in segments]
+    utterances = await asyncio.gather(*tasks)
+
+    session.add_all(utterances)
+    session.commit()
+    return conversation
+
+
+# This is working
 @router.post("/text")
 async def create_conversation_from_text(
     session: SessionDep,

@@ -2,13 +2,13 @@ import torch
 import whisper
 from pyannote.audio import Pipeline
 
-import env
+from config import settings
 
 file = "braun_full.mp3"
 file_without_ext = file.rsplit(".", 1)[0]
 pipeline = Pipeline.from_pretrained(
     "pyannote/speaker-diarization-3.1",
-    use_auth_token=env.SPEAKER_DIARIZATION_TOKEN,
+    use_auth_token=settings.SPEAKER_DIARIZATION_TOKEN,
 )
 
 

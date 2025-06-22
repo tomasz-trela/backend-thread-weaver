@@ -13,3 +13,13 @@ class UtteranceDTO(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class SpeakerUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    surname: Optional[str] = None
+
+
+class SpeakerCreateRequest(BaseModel):
+    name: str
+    surname: str

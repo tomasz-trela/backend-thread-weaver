@@ -11,8 +11,12 @@ class UtteranceDTO(BaseModel):
     conversation_id: int
     speaker: Optional[str]
 
-    class Config:
-        orm_mode = True
+
+class ConversationUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    youtube_id: Optional[str] = None
+    video_filename: Optional[str] = None
 
 
 class SpeakerUpdateRequest(BaseModel):

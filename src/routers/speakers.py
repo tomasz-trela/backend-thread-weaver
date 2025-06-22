@@ -7,7 +7,7 @@ from ..db import Speaker
 from ..typedefs import SessionDep
 
 
-router = APIRouter(prefix="/speakers", tags=["speakers"])
+router = APIRouter(prefix="/speakers", tags=["Speakers"])
 
 
 @router.get("/")

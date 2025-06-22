@@ -4,9 +4,9 @@ from typing import Any, List, Optional
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile
 
-from sqlmodel import select
+from sqlmodel import delete, select
 
-from ..dto import UtteranceDTO
+from ..dto import ConversationUpdateRequest, UtteranceDTO
 from ..googleapi import get_embeddings
 from ..process_data import get_segments
 
@@ -157,6 +157,39 @@ async def create_conversation_from_text(
     return conversation
 
 
+@router.put("/{id}")
+async def update_conversation(
+    id: int,
+    data: ConversationUpdateRequest,
+    session: SessionDep,
+) -> Conversation:
+    conversation = session.get(Conversation, id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    for key, value in data.model_dump().items():
+        if value is not None:
+            setattr(conversation, key, value)
+
+    session.commit()
+    session.refresh(conversation)
+    return conversation
+
+
+@router.delete("/{id}", status_code=204)
+async def delete_conversation(id: int, session: SessionDep):
+    conversation_to_delete = session.get(Conversation, id)
+
+    if not conversation_to_delete:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    utterance_delete_stmt = delete(Utterance).where(Utterance.id == id)
+    session.exec(utterance_delete_stmt)
+
+    session.delete(conversation_to_delete)
+    session.commit()
+
+
 @router.get("/similarity-search", response_model=list[UtteranceDTO])
 async def get_similarity_search(
     query: str,
@@ -294,4 +327,33 @@ async def get_hybrid_search(
             speaker=u.speaker.surname if u.speaker else None,
         )
         for u in final_limited_results
+    ]
+
+
+@router.get("/{conversation_id}/utterances", response_model=list[UtteranceDTO])
+async def get_utterances(
+    conversation_id: int,
+    session: SessionDep,
+) -> list[UtteranceDTO]:
+    conversation = session.get(Conversation, conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    utterances = session.exec(
+        select(Utterance)
+        .where(Utterance.conversation_id == conversation.id)
+        .order_by(Utterance.start_time)
+    ).all()
+
+    return [
+        UtteranceDTO(
+            id=u.id,
+            start_time=u.start_time,
+            end_time=u.end_time,
+            text=u.text,
+            speaker_id=u.speaker_id,
+            conversation_id=u.conversation_id,
+            speaker=u.speaker.surname if u.speaker else None,
+        )
+        for u in utterances
     ]

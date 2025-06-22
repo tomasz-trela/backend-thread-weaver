@@ -38,6 +38,7 @@ class Conversation(SQLModel, table=True):
     )
     youtube_id: str | None = Field(default=None, nullable=True)
     video_filename: str | None = Field(default=None, nullable=True)
+    conversation_date: datetime.date | None = Field(default=None, nullable=True)
 
     utterances: list["Utterance"] = Relationship(back_populates="conversation")
 
@@ -70,13 +71,24 @@ def init_db():
 
 
 def similarity_search(
-    query_embedding: list[float], limit: int, speaker_id: int, session: Session
+    query_embedding: list[float],
+    limit: int,
+    speaker_id: int,
+    start_date: datetime.date,
+    end_date: datetime.date,
+    session: Session,
 ) -> list[Utterance]:
     stmt = (
         select(Utterance)
         .join(Speaker)
         .order_by(Utterance.embedding.cosine_distance(query_embedding))
     )
+
+    if start_date is not None:
+        stmt = stmt.where(Utterance.conversation.has(Conversation.date >= start_date))
+
+    if end_date is not None:
+        stmt = stmt.where(Utterance.conversation.has(Conversation.date <= end_date))
 
     if speaker_id is not None:
         stmt = stmt.where(Utterance.speaker_id == speaker_id)
@@ -93,6 +105,8 @@ def full_text_search(
     limit: int,
     language: str,
     speaker_id: int,
+    start_date: datetime.date,
+    end_date: datetime.date,
     session: Session,
 ) -> list[Utterance]:
     stmt = (
@@ -115,6 +129,12 @@ def full_text_search(
             ).desc()
         )
     )
+
+    if start_date is not None:
+        stmt = stmt.where(Utterance.conversation.has(Conversation.date >= start_date))
+
+    if end_date is not None:
+        stmt = stmt.where(Utterance.conversation.has(Conversation.date <= end_date))
 
     if speaker_id is not None:
         stmt = stmt.where(Utterance.speaker_id == speaker_id)

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import date
 
 
 class UtteranceDTO(BaseModel):
@@ -17,6 +18,7 @@ class ConversationUpdateRequest(BaseModel):
     description: Optional[str] = None
     youtube_id: Optional[str] = None
     video_filename: Optional[str] = None
+    conversation_date: Optional[date] = None
 
 
 class SpeakerUpdateRequest(BaseModel):

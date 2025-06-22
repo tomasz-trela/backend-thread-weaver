@@ -1,4 +1,5 @@
 import asyncio
+from datetime import date
 import json
 from typing import Any, List, Optional
 
@@ -39,6 +40,7 @@ async def create_conversation_from_audio(
     speakers: List[int] = Form(...),
     description: Optional[str] = Form(None),
     youtube_id: Optional[str] = Form(None),
+    conversation_date: Optional[date] = Form(None),
 ) -> Conversation:
     contents = await audio_file.read()
     if not contents:
@@ -48,6 +50,7 @@ async def create_conversation_from_audio(
         title=name.strip(),
         description=description.strip() if description else None,
         youtube_id=youtube_id.strip() if youtube_id else None,
+        conversation_date=conversation_date,
     )
     session.add(conversation)
     session.commit()
@@ -105,11 +108,13 @@ async def create_conversation_from_text(
     speakers: List[int] = Form(...),
     description: Optional[str] = Form(None),
     youtube_id: Optional[str] = Form(None),
+    conversation_date: Optional[date] = Form(None),
 ) -> Conversation:
     conversation = Conversation(
         title=name.strip(),
         description=description.strip() if description else None,
         youtube_id=youtube_id.strip() if youtube_id else None,
+        conversation_date=conversation_date,
     )
     session.add(conversation)
     session.commit()
@@ -196,9 +201,13 @@ async def get_similarity_search(
     session: SessionDep,
     limit: Optional[int] = None,
     speaker_id: Optional[int] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
 ):
     query_embedding = get_embeddings([query]).embeddings[0].values
-    results = similarity_search(query_embedding, limit, speaker_id, session)
+    results = similarity_search(
+        query_embedding, limit, speaker_id, start_date, end_date, session
+    )
 
     return [
         UtteranceDTO(
@@ -221,8 +230,12 @@ async def get_full_text(
     limit: Optional[int] = 20,
     language: Optional[str] = "simple",
     speaker_id: Optional[int] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
 ):
-    results = full_text_search(query, limit, language, speaker_id, session)
+    results = full_text_search(
+        query, limit, language, speaker_id, start_date, end_date, session
+    )
 
     return [
         UtteranceDTO(
@@ -266,6 +279,8 @@ async def get_hybrid_search(
     speaker_id: Optional[int] = None,
     language: Optional[str] = "simple",
     rrf_k: int = 60,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
 ):
     """
     Use a low rrf_k when:
@@ -289,10 +304,14 @@ async def get_hybrid_search(
     """
     fetch_limit = limit * 2 if limit else 40
 
-    fts_results = full_text_search(query, fetch_limit, language, speaker_id, session)
+    fts_results = full_text_search(
+        query, fetch_limit, language, speaker_id, start_date, end_date, session
+    )
 
     query_embedding = get_embeddings([query]).embeddings[0].values
-    sim_results = similarity_search(query_embedding, fetch_limit, speaker_id, session)
+    sim_results = similarity_search(
+        query_embedding, fetch_limit, speaker_id, start_date, end_date, session
+    )
     fused_scores = {}
     results_map = {}
 

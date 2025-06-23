@@ -1,13 +1,16 @@
-import asyncio
 from contextlib import asynccontextmanager
+import threading
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from .data.yt_dlp import get_yt_dlp
 
 from .periodic_worker import periodic_worker
 
 
 from .data.db import (
+    get_session,
     init_db,
 )
 
@@ -17,13 +20,35 @@ from .routers import api
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    task = asyncio.create_task(periodic_worker())
-    yield
-    task.cancel()
+
+    session_gen = get_session()
+    session = next(session_gen)
+
+    yt_dlp_gen = get_yt_dlp()
+    yt_dlp = next(yt_dlp_gen)
+
+    stop_event = threading.Event()
+
+    worker_thread = threading.Thread(
+        target=periodic_worker, args=(session, yt_dlp, stop_event), daemon=True
+    )
+    worker_thread.start()
+
     try:
-        await task
-    except asyncio.CancelledError:
-        pass
+        yield
+    finally:
+        stop_event.set()
+        worker_thread.join()
+
+        try:
+            next(session_gen)
+        except StopIteration:
+            pass
+
+        try:
+            next(yt_dlp_gen)
+        except StopIteration:
+            pass
 
 
 app = FastAPI(lifespan=lifespan)

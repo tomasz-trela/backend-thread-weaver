@@ -1,3 +1,4 @@
+from pathlib import Path
 import torch
 import whisper
 from pyannote.audio import Pipeline
@@ -28,31 +29,25 @@ class TranscriptionService:
                 torch.device("cuda" if torch.cuda.is_available() else "cpu")
             )
 
-    def process_audio(self, audio_bytes: bytes) -> tuple[list, dict]:
+    def process_audio(self, audio_path: Path) -> tuple[list, dict]:
         self._load_whisper_model()
         self._load_diarization_pipeline()
 
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".tmp") as tmp:
-                tmp.write(audio_bytes)
-                tmp_path = tmp.name
+        diarization = self._diarization_pipeline(str(audio_path))
 
-            diarization = self._diarization_pipeline(tmp_path)
+        speaker_data = []
+        for turn, _, speaker in diarization.itertracks(yield_label=True):
+            speaker_data.append(
+                {
+                    "start": turn.start,
+                    "end": turn.end,
+                    "speaker": speaker,
+                }
+            )
 
-            speaker_data = []
-            for turn, _, speaker in diarization.itertracks(yield_label=True):
-                speaker_data.append(
-                    {
-                        "start": turn.start,
-                        "end": turn.end,
-                        "speaker": speaker,
-                    }
-                )
-
-            transcription_result = self._whisper_model.transcribe(tmp_path)
-
-        finally:
-            if "tmp_path" in locals() and os.path.exists(tmp_path):
-                os.remove(tmp_path)
+        transcription_result = self._whisper_model.transcribe(str(audio_path))
 
         return (speaker_data, transcription_result)
+
+
+transcriptionService = TranscriptionService()

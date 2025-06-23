@@ -1,17 +1,21 @@
 from datetime import date
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Form, HTTPException, UploadFile, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, UploadFile
 
 from sqlmodel import delete, select
 
 from ..helpers import (
-    create_conversation_from_audio,
+    create_conversation,
     create_conversation_from_text,
     run_async_task,
 )
 
-from ..models.dto import ConversationUpdateRequest, UtteranceDTO
+from ..models.dto import (
+    ConversationCreateRequest,
+    ConversationUpdateRequest,
+    UtteranceDTO,
+)
 from ..data.googleapi import get_embeddings
 
 from ..data.db import (
@@ -22,38 +26,52 @@ from ..data.db import (
     similarity_search,
 )
 from ..typedefs import SessionDep
-from ..services.transcription import TranscriptionService
 
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
 
-transcriptionService = TranscriptionService()
 
-
-# @router.post("/yt", status_code=201)
-@router.post("/audio", status_code=201)
-async def add_audio_converstaion_to_tasks(
+@router.post("/")
+async def add_conversation_with_speakers(
     session: SessionDep,
-    background_tasks: BackgroundTasks,
-    audio_file: UploadFile,
-    name: str = Form(...),
-    speakers: List[int] = Form(...),
-    description: Optional[str] = Form(None),
-    youtube_id: Optional[str] = Form(None),
-    conversation_date: Optional[date] = Form(None),
-):
-    background_tasks.add_task(
-        run_async_task,
-        create_conversation_from_audio,
-        session,
-        audio_file,
-        name,
-        speakers,
-        transcriptionService,
-        description,
-        youtube_id,
-        conversation_date,
+    data: ConversationCreateRequest,
+) -> Conversation:
+    conversation = create_conversation(
+        session=session,
+        name=data.title,
+        description=data.description,
+        youtube_id=data.youtube_id,
+        conversation_date=data.conversation_date,
+        status=data.status,
+        youtube_url=data.youtube_url,
     )
-    return {"message": "Conversation creation task has been started"}
+
+    return conversation
+
+
+# @router.post("/audio", status_code=201)
+# async def add_audio_converstaion_to_tasks(
+#     session: SessionDep,
+#     background_tasks: BackgroundTasks,
+#     audio_file: UploadFile,
+#     name: str = Form(...),
+#     speakers: List[int] = Form(...),
+#     description: Optional[str] = Form(None),
+#     youtube_id: Optional[str] = Form(None),
+#     conversation_date: Optional[date] = Form(None),
+# ):
+#     background_tasks.add_task(
+#         run_async_task,
+#         create_conversation_from_audio,
+#         session,
+#         audio_file,
+#         name,
+#         speakers,
+#         transcriptionService,
+#         description,
+#         youtube_id,
+#         conversation_date,
+#     )
+#     return {"message": "Conversation creation task has been started"}
 
 
 @router.post("/text", status_code=201)

@@ -6,6 +6,7 @@ from fastapi import HTTPException, UploadFile
 from sqlmodel import select
 
 from src.data.db import Conversation, Speaker, Utterance
+from src.data.entities import ConversationStatus
 from src.data.googleapi import get_embeddings
 from src.data.process_data import get_segments
 from src.services.transcription import TranscriptionService
@@ -23,12 +24,19 @@ def create_conversation(
     description: Optional[str],
     youtube_id: Optional[str],
     conversation_date: Optional[date],
+    status: Optional[ConversationStatus] = None,
+    youtube_url: Optional[str] = None,
 ) -> Conversation:
+    if youtube_url:
+        status = ConversationStatus.pending
+
     conversation = Conversation(
         title=name.strip(),
         description=description.strip() if description else None,
         youtube_id=youtube_id.strip() if youtube_id else None,
         conversation_date=conversation_date,
+        youtube_url=youtube_url.strip() if youtube_url else None,
+        status=status,
     )
     session.add(conversation)
     session.commit()

@@ -2,9 +2,9 @@ import torch
 import whisper
 from pyannote.audio import Pipeline
 
-from .config import settings
+from config import settings
 
-file = "braun_full.mp3"
+file = "debata_konskie_polsat.mp3"
 file_without_ext = file.rsplit(".", 1)[0]
 pipeline = Pipeline.from_pretrained(
     "pyannote/speaker-diarization-3.1",
@@ -29,7 +29,7 @@ with open(file_without_ext + "_speaker_segments.json", "w", encoding="utf8") as 
 
 
 model = whisper.load_model("turbo")
-result = model.transcribe(file)
+result = model.transcribe(file, language="pl")
 
 with open(file_without_ext + "_whisper_segments.json", "w", encoding="utf8") as f:
     import json

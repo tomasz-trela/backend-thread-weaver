@@ -105,6 +105,7 @@ def periodic_worker(session: Session, yt_dlp: YoutubeDL, stop_event: Event):
                 conversation=conversation,
                 speaker_data=speaker_data,
                 whisper_data=whisper_data,
+                limit=10,
             )
 
             conversation.status = ConversationStatus.completed

@@ -46,6 +46,9 @@ class TranscriptionService:
 
         transcription_result = self._whisper_model.transcribe(str(audio_path))
 
+        print(speaker_data)
+        print(transcription_result)
+
         return (speaker_data, transcription_result)
 
 

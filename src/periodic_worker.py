@@ -100,12 +100,14 @@ def periodic_worker(session: Session, yt_dlp: YoutubeDL, stop_event: Event):
 
             speaker_data, whisper_data = transcriptionService.process_audio(filePath)
 
-            process_and_save_utterances_without_speakers(
-                session=session,
-                conversation=conversation,
-                speaker_data=speaker_data,
-                whisper_data=whisper_data,
-                limit=10,
+            asyncio.run(
+                process_and_save_utterances_without_speakers(
+                    session=session,
+                    conversation=conversation,
+                    speaker_data=speaker_data,
+                    whisper_data=whisper_data,
+                    limit=10,
+                )
             )
 
             conversation.status = ConversationStatus.completed

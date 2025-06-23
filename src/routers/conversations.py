@@ -64,7 +64,7 @@ async def create_conversation_from_audio(
         speaker_id: speaker for speaker_id, speaker in zip(speakers, speakers_list)
     }
 
-    speaker_data, whisper_data = transcriptionService.transcribe_audio(contents)
+    speaker_data, whisper_data = transcriptionService.process_audio(contents)
 
     segments = get_segments(speaker_data, whisper_data)
 
@@ -218,8 +218,8 @@ async def get_similarity_search(
             speaker_id=u.speaker_id,
             conversation_id=u.conversation_id,
             conversation=u.conversation,
-            speaker = u.speaker,
-            speaker_surname=u.speaker.surname if u.speaker else None
+            speaker=u.speaker,
+            speaker_surname=u.speaker.surname if u.speaker else None,
         )
         for u in results
     ]
@@ -248,8 +248,8 @@ async def get_full_text(
             speaker_id=u.speaker_id,
             conversation_id=u.conversation_id,
             conversation=u.conversation,
-            speaker = u.speaker,
-            speaker_surname=u.speaker.surname if u.speaker else None
+            speaker=u.speaker,
+            speaker_surname=u.speaker.surname if u.speaker else None,
         )
         for u in results
     ]
@@ -348,8 +348,8 @@ async def get_hybrid_search(
             speaker_id=u.speaker_id,
             conversation_id=u.conversation_id,
             conversation=u.conversation,
-            speaker = u.speaker,
-            speaker_surname=u.speaker.surname if u.speaker else None
+            speaker=u.speaker,
+            speaker_surname=u.speaker.surname if u.speaker else None,
         )
         for u in final_limited_results
     ]
@@ -379,8 +379,8 @@ async def get_utterances(
             speaker_id=u.speaker_id,
             conversation_id=u.conversation_id,
             conversation=u.conversation,
-            speaker = u.speaker,
-            speaker_surname=u.speaker.surname if u.speaker else None
+            speaker=u.speaker,
+            speaker_surname=u.speaker.surname if u.speaker else None,
         )
         for u in utterances
     ]

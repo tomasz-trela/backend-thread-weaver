@@ -6,11 +6,7 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    POSTGRES_SERVER: str = "localhost"
-    POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "thread_waver"
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
+    DATABASE_URL: str = ""
 
     GOOGLE_AI_STUDIO_API_KEY: str = ""
     SPEAKER_DIARIZATION_TOKEN: str = ""

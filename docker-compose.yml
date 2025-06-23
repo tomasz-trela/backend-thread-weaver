@@ -1,9 +1,44 @@
+version: '3.8'
+
 services:
   db:
-    image: pgvector/pgvector:pg17
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=thread_weaver
+    image: ankane/pgvector
+    container_name: postgres_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
     ports:
       - "5432:5432"
+    environment:
+      - POSTGRES_USER=fastapi_user
+      - POSTGRES_PASSWORD=fastapi_password
+      - POSTGRES_DB=fastapi_db
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fastapi_user -d fastapi_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: backend-thread-weaver
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    env_file: ./.env
+    environment:
+      - DATABASE_URL=postgresql://fastapi_user:fastapi_password@db:5432/fastapi_db
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+
+volumes:
+  postgres_data:
+
+networks:
+  app_network:
+    driver: bridge

@@ -1,0 +1,16 @@
+.git
+.gitignore
+
+Dockerfile
+
+.venv
+venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.vscode/
+.idea/
+
+dataset/

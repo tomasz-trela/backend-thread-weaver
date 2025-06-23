@@ -8,6 +8,7 @@ from sqlmodel import select
 from src.data.db import Conversation, Speaker, Utterance
 from src.data.googleapi import get_embeddings
 from src.data.process_data import get_segments
+from src.services.transcription import TranscriptionService
 from .typedefs import SessionDep
 
 
@@ -82,3 +83,72 @@ async def process_and_save_utterances(
     if utterances:
         session.add_all(utterances)
         session.commit()
+
+
+async def create_conversation_from_audio(
+    session: SessionDep,
+    audio_file: UploadFile,
+    name: str,
+    speakers: List[int],
+    transcriptionService: TranscriptionService,
+    description: Optional[str] = None,
+    youtube_id: Optional[str] = None,
+    conversation_date: Optional[date] = None,
+):
+    conversation = create_conversation(
+        session=session,
+        name=name,
+        description=description,
+        youtube_id=youtube_id,
+        conversation_date=conversation_date,
+    )
+
+    contents = await audio_file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="File is empty")
+    speaker_data, whisper_data = transcriptionService.process_audio(contents)
+
+    await process_and_save_utterances(
+        session=session,
+        conversation=conversation,
+        speakers=speakers,
+        speaker_data=speaker_data,
+        whisper_data=whisper_data,
+    )
+
+
+async def create_conversation_from_text(
+    session: SessionDep,
+    speaker_data_bytes: bytes,
+    whisper_data_bytes: bytes,
+    name: str,
+    speakers: List[int],
+    description: Optional[str] = None,
+    youtube_id: Optional[str] = None,
+    conversation_date: Optional[date] = None,
+):
+    conversation = create_conversation(
+        session=session,
+        name=name,
+        description=description,
+        youtube_id=youtube_id,
+        conversation_date=conversation_date,
+    )
+
+    speaker_data = json.loads(speaker_data_bytes.decode("utf8"))
+    whisper_data = json.loads(whisper_data_bytes.decode("utf8"))
+
+    await process_and_save_utterances(
+        session=session,
+        conversation=conversation,
+        speakers=speakers,
+        speaker_data=speaker_data,
+        whisper_data=whisper_data,
+        limit=50,
+    )
+
+    return conversation
+
+
+def run_async_task(fn, *args, **kwargs):
+    asyncio.run(fn(*args, **kwargs))

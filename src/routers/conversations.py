@@ -1,11 +1,15 @@
 from datetime import date
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Form, HTTPException, UploadFile, BackgroundTasks
 
 from sqlmodel import delete, select
 
-from ..helpers import create_conversation, load_json, process_and_save_utterances
+from ..helpers import (
+    create_conversation_from_audio,
+    create_conversation_from_text,
+    run_async_task,
+)
 
 from ..models.dto import ConversationUpdateRequest, UtteranceDTO
 from ..data.googleapi import get_embeddings
@@ -25,43 +29,36 @@ router = APIRouter(prefix="/conversations", tags=["Conversations"])
 transcriptionService = TranscriptionService()
 
 
-@router.post("/audio")
-async def create_conversation_from_audio(
+@router.post("/audio", status_code=201)
+async def add_audio_converstaion_to_tasks(
     session: SessionDep,
+    background_tasks: BackgroundTasks,
     audio_file: UploadFile,
     name: str = Form(...),
     speakers: List[int] = Form(...),
     description: Optional[str] = Form(None),
     youtube_id: Optional[str] = Form(None),
     conversation_date: Optional[date] = Form(None),
-) -> Conversation:
-    conversation = create_conversation(
-        session=session,
-        name=name,
-        description=description,
-        youtube_id=youtube_id,
-        conversation_date=conversation_date,
+):
+    background_tasks.add_task(
+        run_async_task,
+        create_conversation_from_audio,
+        session,
+        audio_file,
+        name,
+        speakers,
+        transcriptionService,
+        description,
+        youtube_id,
+        conversation_date,
     )
-
-    contents = await audio_file.read()
-    if not contents:
-        raise HTTPException(status_code=400, detail="File is empty")
-    speaker_data, whisper_data = transcriptionService.process_audio(contents)
-
-    await process_and_save_utterances(
-        session=session,
-        conversation=conversation,
-        speakers=speakers,
-        speaker_data=speaker_data,
-        whisper_data=whisper_data,
-    )
-
-    return conversation
+    return {"message": "Conversation creation task has been started"}
 
 
-@router.post("/text")
-async def create_conversation_from_text(
+@router.post("/text", status_code=201)
+async def add_text_converstaion_to_tasks(
     session: SessionDep,
+    background_tasks: BackgroundTasks,
     speaker_file: UploadFile,
     whisper_file: UploadFile,
     name: str = Form(...),
@@ -69,28 +66,23 @@ async def create_conversation_from_text(
     description: Optional[str] = Form(None),
     youtube_id: Optional[str] = Form(None),
     conversation_date: Optional[date] = Form(None),
-) -> Conversation:
-    conversation = create_conversation(
-        session=session,
-        name=name,
-        description=description,
-        youtube_id=youtube_id,
-        conversation_date=conversation_date,
+):
+    speaker_data_bytes = await speaker_file.read()
+    whisper_data_bytes = await whisper_file.read()
+
+    background_tasks.add_task(
+        run_async_task,
+        create_conversation_from_text,
+        session,
+        speaker_data_bytes,
+        whisper_data_bytes,
+        name,
+        speakers,
+        description,
+        youtube_id,
+        conversation_date,
     )
-
-    speaker_data = await load_json(speaker_file)
-    whisper_data = await load_json(whisper_file)
-
-    await process_and_save_utterances(
-        session=session,
-        conversation=conversation,
-        speakers=speakers,
-        speaker_data=speaker_data,
-        whisper_data=whisper_data,
-        limit=50,
-    )
-
-    return conversation
+    return {"message": "Conversation creation task has been started"}
 
 
 @router.put("/{id}")

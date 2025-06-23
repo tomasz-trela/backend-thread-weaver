@@ -100,6 +100,10 @@ def periodic_worker(session: Session, yt_dlp: YoutubeDL, stop_event: Event):
 
             speaker_data, whisper_data = transcriptionService.process_audio(filePath)
 
+            print(
+                f"Transcription completed for conversation: {conversation.id} - {conversation.youtube_url}"
+            )
+
             asyncio.run(
                 process_and_save_utterances_without_speakers(
                     session=session,
@@ -108,6 +112,9 @@ def periodic_worker(session: Session, yt_dlp: YoutubeDL, stop_event: Event):
                     whisper_data=whisper_data,
                     limit=10,
                 )
+            )
+            print(
+                f"Utterances saved for conversation: {conversation.id} - {conversation.youtube_url}"
             )
 
             conversation.status = ConversationStatus.completed

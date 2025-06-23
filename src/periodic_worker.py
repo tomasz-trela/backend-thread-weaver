@@ -8,8 +8,6 @@ from sqlmodel import Session, select
 
 from src.data.googleapi import get_embeddings
 from src.data.process_data import get_segments
-from src.helpers import process_and_save_utterances
-from src.routers import speakers
 
 
 from .data.entities import Conversation, ConversationStatus, Speaker, Utterance
@@ -100,18 +98,17 @@ def periodic_worker(session: Session, yt_dlp: YoutubeDL, stop_event: Event):
                 f"Finished processing conversation: {conversation.id} - {conversation.youtube_url}"
             )
 
-            conversation.status = ConversationStatus.completed
-            session.add(conversation)
-            session.commit()
-
             speaker_data, whisper_data = transcriptionService.process_audio(filePath)
 
             process_and_save_utterances_without_speakers(
                 session=session,
                 conversation=conversation,
-                speakers=list(speakers),
                 speaker_data=speaker_data,
                 whisper_data=whisper_data,
             )
+
+            conversation.status = ConversationStatus.completed
+            session.add(conversation)
+            session.commit()
 
         stop_event.wait(timeout=60)

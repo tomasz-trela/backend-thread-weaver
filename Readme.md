@@ -110,7 +110,9 @@ This Swagger UI provides an interactive interface to explore and test all API en
 
 ## 🧪 Running Tests
 
-> Coming soon (or describe how to run with pytest if already supported)
+```bash
+pytest
+```
 
 ## 📝 License
 

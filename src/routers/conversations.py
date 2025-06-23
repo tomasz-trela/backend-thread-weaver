@@ -217,7 +217,9 @@ async def get_similarity_search(
             text=u.text,
             speaker_id=u.speaker_id,
             conversation_id=u.conversation_id,
-            speaker=u.speaker.surname if u.speaker else None,
+            conversation=u.conversation,
+            speaker = u.speaker,
+            speaker_surname=u.speaker.surname if u.speaker else None
         )
         for u in results
     ]
@@ -245,7 +247,9 @@ async def get_full_text(
             text=u.text,
             speaker_id=u.speaker_id,
             conversation_id=u.conversation_id,
-            speaker=u.speaker.surname if u.speaker else None,
+            conversation=u.conversation,
+            speaker = u.speaker,
+            speaker_surname=u.speaker.surname if u.speaker else None
         )
         for u in results
     ]
@@ -343,7 +347,9 @@ async def get_hybrid_search(
             text=u.text,
             speaker_id=u.speaker_id,
             conversation_id=u.conversation_id,
-            speaker=u.speaker.surname if u.speaker else None,
+            conversation=u.conversation,
+            speaker = u.speaker,
+            speaker_surname=u.speaker.surname if u.speaker else None
         )
         for u in final_limited_results
     ]
@@ -372,7 +378,9 @@ async def get_utterances(
             text=u.text,
             speaker_id=u.speaker_id,
             conversation_id=u.conversation_id,
-            speaker=u.speaker.surname if u.speaker else None,
+            conversation=u.conversation,
+            speaker = u.speaker,
+            speaker_surname=u.speaker.surname if u.speaker else None
         )
         for u in utterances
     ]

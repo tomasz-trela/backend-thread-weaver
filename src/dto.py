@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date
+from src.db import Conversation, Speaker
 
 
 class UtteranceDTO(BaseModel):
@@ -10,7 +11,9 @@ class UtteranceDTO(BaseModel):
     text: str
     speaker_id: Optional[int]
     conversation_id: int
-    speaker: Optional[str]
+    conversation: Conversation
+    speaker_surname: Optional[str]
+    speaker: Optional[Speaker]
 
 
 class ConversationUpdateRequest(BaseModel):

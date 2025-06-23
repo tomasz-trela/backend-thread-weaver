@@ -1,5 +1,7 @@
 .git
 .gitignore
+.example.env
+todo.md
 
 Dockerfile
 

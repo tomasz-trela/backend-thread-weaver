@@ -1,7 +1,7 @@
 import torch
 import whisper
 from pyannote.audio import Pipeline
-from .config import settings
+from ..config import settings
 import tempfile
 import os
 # Zrobiłem leniwe ładowanie modeli aby nie czekać przy kadym urchmieniu api

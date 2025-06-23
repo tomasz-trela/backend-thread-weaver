@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date
-from src.db import Conversation, Speaker
+from src.data.db import Conversation, Speaker
 
 
 class UtteranceDTO(BaseModel):

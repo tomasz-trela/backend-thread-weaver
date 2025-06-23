@@ -28,7 +28,7 @@ with open(file_without_ext + "_speaker_segments.json", "w", encoding="utf8") as 
     json.dump(speaker_data, f, indent=4)
 
 
-model = whisper.load_model("turbo")
+model = whisper.load_model("tiny")
 result = model.transcribe(file, language="pl")
 
 with open(file_without_ext + "_whisper_segments.json", "w", encoding="utf8") as f:

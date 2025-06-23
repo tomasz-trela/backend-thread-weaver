@@ -4,7 +4,7 @@ import torch
 import whisper
 from pyannote.audio import Pipeline
 
-from .config import settings
+from ..config import settings
 
 file = "braun_10.mp3"
 pipeline = Pipeline.from_pretrained(

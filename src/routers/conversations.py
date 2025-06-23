@@ -1,17 +1,16 @@
-import asyncio
 from datetime import date
-import json
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile
 
 from sqlmodel import delete, select
 
-from ..dto import ConversationUpdateRequest, UtteranceDTO
-from ..googleapi import get_embeddings
-from ..process_data import get_segments
+from ..helpers import create_conversation, load_json, process_and_save_utterances
 
-from ..db import (
+from ..models.dto import ConversationUpdateRequest, UtteranceDTO
+from ..data.googleapi import get_embeddings
+
+from ..data.db import (
     Conversation,
     Speaker,
     Utterance,
@@ -19,19 +18,13 @@ from ..db import (
     similarity_search,
 )
 from ..typedefs import SessionDep
-from ..transcription_service import TranscriptionService
+from ..services.transcription import TranscriptionService
 
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
 
 transcriptionService = TranscriptionService()
 
 
-async def load_json(upload_file: UploadFile):
-    content = await upload_file.read()
-    return json.loads(content.decode("utf8"))
-
-
-# I don't know if this is working
 @router.post("/audio")
 async def create_conversation_from_audio(
     session: SessionDep,
@@ -42,63 +35,30 @@ async def create_conversation_from_audio(
     youtube_id: Optional[str] = Form(None),
     conversation_date: Optional[date] = Form(None),
 ) -> Conversation:
+    conversation = create_conversation(
+        session=session,
+        name=name,
+        description=description,
+        youtube_id=youtube_id,
+        conversation_date=conversation_date,
+    )
+
     contents = await audio_file.read()
     if not contents:
         raise HTTPException(status_code=400, detail="File is empty")
-
-    conversation = Conversation(
-        title=name.strip(),
-        description=description.strip() if description else None,
-        youtube_id=youtube_id.strip() if youtube_id else None,
-        conversation_date=conversation_date,
-    )
-    session.add(conversation)
-    session.commit()
-    session.refresh(conversation)
-
-    speakers_list = session.exec(select(Speaker).where(Speaker.id.in_(speakers))).all()
-    if not speakers_list:
-        return {"error": "No valid speakers found for the conversation"}
-
-    speakers_dict = {
-        speaker_id: speaker for speaker_id, speaker in zip(speakers, speakers_list)
-    }
-
     speaker_data, whisper_data = transcriptionService.process_audio(contents)
 
-    segments = get_segments(speaker_data, whisper_data)
+    await process_and_save_utterances(
+        session=session,
+        conversation=conversation,
+        speakers=speakers,
+        speaker_data=speaker_data,
+        whisper_data=whisper_data,
+    )
 
-    semaphore = asyncio.Semaphore(20)
-    # Limit concurrent embedding requests, due to resource exhaustion exception
-    # if you get an error try to chanege it
-
-    async def process_segment(segment):
-        async with semaphore:
-            embedding = await asyncio.to_thread(get_embeddings, [segment["text"]])
-
-            speaker_id = None
-            if segment["speaker"] != -1:
-                speaker_index = segment["speaker"]
-                speaker_id = speakers_dict.get(speakers[speaker_index]).id
-
-            return Utterance(
-                start_time=segment["start"],
-                end_time=segment["end"],
-                text=segment["text"],
-                embedding=embedding.embeddings[0].values,
-                conversation_id=conversation.id,
-                speaker_id=speaker_id,
-            )
-
-    tasks = [process_segment(segment) for segment in segments]
-    utterances = await asyncio.gather(*tasks)
-
-    session.add_all(utterances)
-    session.commit()
     return conversation
 
 
-# This is working
 @router.post("/text")
 async def create_conversation_from_text(
     session: SessionDep,
@@ -110,55 +70,26 @@ async def create_conversation_from_text(
     youtube_id: Optional[str] = Form(None),
     conversation_date: Optional[date] = Form(None),
 ) -> Conversation:
-    conversation = Conversation(
-        title=name.strip(),
-        description=description.strip() if description else None,
-        youtube_id=youtube_id.strip() if youtube_id else None,
+    conversation = create_conversation(
+        session=session,
+        name=name,
+        description=description,
+        youtube_id=youtube_id,
         conversation_date=conversation_date,
     )
-    session.add(conversation)
-    session.commit()
-    session.refresh(conversation)
-
-    speakers_list = session.exec(select(Speaker).where(Speaker.id.in_(speakers))).all()
-    if not speakers_list:
-        return {"error": "No valid speakers found for the conversation"}
-
-    speakers_dict = {
-        speaker_id: speaker for speaker_id, speaker in zip(speakers, speakers_list)
-    }
 
     speaker_data = await load_json(speaker_file)
     whisper_data = await load_json(whisper_file)
-    segments = get_segments(speaker_data, whisper_data)
 
-    semaphore = asyncio.Semaphore(20)
-    # Limit concurrent embedding requests, due to resource exhaustion exception
-    # if you get an error try to chanege it
+    await process_and_save_utterances(
+        session=session,
+        conversation=conversation,
+        speakers=speakers,
+        speaker_data=speaker_data,
+        whisper_data=whisper_data,
+        limit=50,
+    )
 
-    async def process_segment(segment):
-        async with semaphore:
-            embedding = await asyncio.to_thread(get_embeddings, [segment["text"]])
-
-            speaker_id = None
-            if segment["speaker"] != -1:
-                speaker_index = segment["speaker"]
-                speaker_id = speakers_dict.get(speakers[speaker_index]).id
-
-            return Utterance(
-                start_time=segment["start"],
-                end_time=segment["end"],
-                text=segment["text"],
-                embedding=embedding.embeddings[0].values,
-                conversation_id=conversation.id,
-                speaker_id=speaker_id,
-            )
-
-    tasks = [process_segment(segment) for segment in segments[:50]]
-    utterances = await asyncio.gather(*tasks)
-
-    session.add_all(utterances)
-    session.commit()
     return conversation
 
 

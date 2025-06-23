@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from sqlmodel import select
 
-from ..dto import SpeakerCreateRequest, SpeakerUpdateRequest
+from ..models.dto import SpeakerCreateRequest, SpeakerUpdateRequest
 
-from ..db import Speaker
+from ..data.db import Speaker
 from ..typedefs import SessionDep
 
 

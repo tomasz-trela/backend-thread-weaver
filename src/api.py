@@ -1,7 +1,10 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from .periodic_worker import periodic_worker
 
 
 from .data.db import (
@@ -14,7 +17,13 @@ from .routers import api
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    task = asyncio.create_task(periodic_worker())
     yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(lifespan=lifespan)

@@ -2,6 +2,12 @@ import datetime
 from typing import Any
 from pgvector.sqlalchemy import Vector
 from sqlmodel import Field, Relationship, SQLModel
+from enum import Enum
+
+
+class ConversationStatus(str, Enum):
+    pending = "pending"
+    completed = "completed"
 
 
 class Speaker(SQLModel, table=True):
@@ -22,6 +28,8 @@ class Conversation(SQLModel, table=True):
     youtube_id: str | None = Field(default=None, nullable=True)
     video_filename: str | None = Field(default=None, nullable=True)
     conversation_date: datetime.date | None = Field(default=None, nullable=True)
+    youtube_url: str | None = Field(default=None, nullable=True)
+    status: ConversationStatus | None = Field(None)
 
     utterances: list["Utterance"] = Relationship(back_populates="conversation")
 

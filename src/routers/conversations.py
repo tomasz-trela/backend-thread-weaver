@@ -36,7 +36,6 @@ async def get_conversations(session: SessionDep) -> list[Conversation]:
     conversations = session.exec(stmt).all()
     return conversations
 
-
 @router.post("/")
 async def add_conversation(
     session: SessionDep,
@@ -73,7 +72,7 @@ async def get_speakers(id: int, session: SessionDep) -> List[Speaker]:
     return speakers
 
 
-@router.get("/{id}/uterances")
+@router.get("/{id}/utterances")
 async def get_utterances(
     id: int,
     session: SessionDep,
@@ -178,9 +177,11 @@ async def add_text_converstaion_to_tasks(
     description: Optional[str] = Form(None),
     youtube_id: Optional[str] = Form(None),
     conversation_date: Optional[date] = Form(None),
+    diff_time: Optional[int] = Form(None)
 ):
     speaker_data_bytes = await speaker_file.read()
     whisper_data_bytes = await whisper_file.read()
+
 
     background_tasks.add_task(
         run_async_task,
@@ -193,6 +194,7 @@ async def add_text_converstaion_to_tasks(
         description,
         youtube_id,
         conversation_date,
+        diff_time
     )
     return {"message": "Conversation creation task has been started"}
 
@@ -397,3 +399,11 @@ async def get_hybrid_search(
         )
         for u in final_limited_results
     ]
+
+
+@router.get("/{id}")
+async def get_conversation(id: int, session: SessionDep) -> Conversation:
+    conversation = session.get(Conversation, id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return conversation

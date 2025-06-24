@@ -12,6 +12,8 @@ from src.data.process_data import get_segments
 from src.services.transcription import TranscriptionService
 from .typedefs import SessionDep
 
+from src.workers.conversations_periodic_worker import process_and_save_utterances_without_speakers
+
 
 async def load_json(upload_file: UploadFile):
     content = await upload_file.read()
@@ -27,8 +29,8 @@ def create_conversation(
     status: Optional[ConversationStatus] = None,
     youtube_url: Optional[str] = None,
 ) -> Conversation:
-    if youtube_url:
-        status = ConversationStatus.pending
+    # if youtube_url:
+    #     status = ConversationStatus.pending
 
     conversation = Conversation(
         title=name.strip(),
@@ -138,6 +140,7 @@ async def create_conversation_from_text(
     description: Optional[str] = None,
     youtube_id: Optional[str] = None,
     conversation_date: Optional[date] = None,
+    diff_time: Optional[int] = None,
 ):
     conversation = create_conversation(
         session=session,
@@ -145,18 +148,35 @@ async def create_conversation_from_text(
         description=description,
         youtube_id=youtube_id,
         conversation_date=conversation_date,
+        status=ConversationStatus.completed,
+        youtube_url=f"https://www.youtube.com/watch?v={youtube_id}" if youtube_id else None,
     )
 
     speaker_data = json.loads(speaker_data_bytes.decode("utf8"))
     whisper_data = json.loads(whisper_data_bytes.decode("utf8"))
 
-    await process_and_save_utterances(
+    if diff_time:
+        for i in range(len(speaker_data)):
+            speaker_data[i][0] += diff_time
+            speaker_data[i][1] += diff_time
+        for segment in whisper_data["segments"]:
+            segment["start"] += diff_time
+            segment["end"] += diff_time
+
+    # await process_and_save_utterances(
+    #     session=session,
+    #     conversation=conversation,
+    #     speakers=speakers,
+    #     speaker_data=speaker_data,
+    #     whisper_data=whisper_data,
+    #     limit=50,
+    # )
+
+    await process_and_save_utterances_without_speakers(
         session=session,
         conversation=conversation,
-        speakers=speakers,
         speaker_data=speaker_data,
         whisper_data=whisper_data,
-        limit=50,
     )
 
     return conversation

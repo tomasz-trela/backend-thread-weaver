@@ -23,6 +23,8 @@ def get_session():
     with Session(engine) as session:
         yield session
 
+def get_raw_session():
+    return Session(engine)
 
 def init_db():
     with Session(engine) as session:
@@ -49,10 +51,10 @@ def similarity_search(
     )
 
     if start_date is not None:
-        stmt = stmt.where(Utterance.conversation.has(Conversation.date >= start_date))
+        stmt = stmt.where(Utterance.conversation.has(Conversation.conversation_date >= start_date))
 
     if end_date is not None:
-        stmt = stmt.where(Utterance.conversation.has(Conversation.date <= end_date))
+        stmt = stmt.where(Utterance.conversation.has(Conversation.conversation_date <= end_date))
 
     if speaker_id is not None:
         stmt = stmt.where(Utterance.speaker_id == speaker_id)
@@ -99,10 +101,10 @@ def full_text_search(
     )
 
     if start_date is not None:
-        stmt = stmt.where(Utterance.conversation.has(Conversation.date >= start_date))
+        stmt = stmt.where(Utterance.conversation.has(Conversation.conversation_date >= start_date))
 
     if end_date is not None:
-        stmt = stmt.where(Utterance.conversation.has(Conversation.date <= end_date))
+        stmt = stmt.where(Utterance.conversation.has(Conversation.conversation_date <= end_date))
 
     if speaker_id is not None:
         stmt = stmt.where(Utterance.speaker_id == speaker_id)

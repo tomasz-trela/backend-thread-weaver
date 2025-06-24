@@ -20,10 +20,7 @@ from .routers import api
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-
-    session_gen = get_session()
-    session = next(session_gen)
-
+    
     yt_dlp_gen = get_yt_dlp()
     yt_dlp = next(yt_dlp_gen)
 
@@ -31,12 +28,12 @@ async def lifespan(app: FastAPI):
 
     conversations_worker_thread = threading.Thread(
         target=conversations_periodic_worker.periodic_worker,
-        args=(session, yt_dlp, stop_event),
+        args=(yt_dlp, stop_event),
         daemon=True,
     )
     utterances_worker_thread = threading.Thread(
         target=utterances_periodic_worker.periodic_worker,
-        args=(session, stop_event),
+        args=(stop_event,),
         daemon=True,
     )
 
@@ -49,11 +46,6 @@ async def lifespan(app: FastAPI):
         stop_event.set()
         conversations_worker_thread.join()
         utterances_worker_thread.join()
-
-        try:
-            next(session_gen)
-        except StopIteration:
-            pass
 
         try:
             next(yt_dlp_gen)

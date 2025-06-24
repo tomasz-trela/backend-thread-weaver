@@ -4,10 +4,12 @@ from sqlmodel import Session, select
 
 from src.data.entities import Utterance
 from src.data.googleapi import get_embeddings
+from src.data.db import get_raw_session
 
-
-def periodic_worker(session: Session, stop_event: Event):
+def periodic_worker(stop_event: Event):
     while not stop_event.is_set():
+        session: Session = get_raw_session()
+        
         stmt = select(Utterance).where(Utterance.embedding == None).limit(1)
         utterance = session.exec(stmt).first()
         if utterance:
@@ -22,3 +24,5 @@ def periodic_worker(session: Session, stop_event: Event):
                 stop_event.wait(timeout=60)
         else:
             stop_event.wait(timeout=60)
+
+        session.close()

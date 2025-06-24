@@ -14,7 +14,6 @@ from ..helpers import (
 from ..models.dto import (
     ConversationCreateRequest,
     ConversationUpdateRequest,
-    SpeakerUpdateRequest,
     UtteranceDTO,
 )
 from ..data.googleapi import get_embeddings
@@ -56,7 +55,7 @@ async def add_conversation(
 
 
 @router.get("/{id}/speakers")
-async def get_speakers(session: SessionDep) -> List[Speaker]:
+async def get_speakers(id: int, session: SessionDep) -> List[Speaker]:
     conversation = session.get(Conversation, id)
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -72,6 +71,71 @@ async def get_speakers(session: SessionDep) -> List[Speaker]:
     ).all()
 
     return speakers
+
+
+@router.get("/{id}/uterances")
+async def get_utterances(
+    session: SessionDep,
+    speaker_id: Optional[int] = None,
+):
+    conversation = session.get(Conversation, id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    stmt = select(Utterance).where(Utterance.conversation_id == conversation.id)
+
+    if speaker_id is not None:
+        stmt = stmt.where(Utterance.speaker_id == speaker_id)
+
+    utterances = session.exec(stmt).all()
+
+    return [
+        UtteranceDTO(
+            id=u.id,
+            start_time=u.start_time,
+            end_time=u.end_time,
+            text=u.text,
+            speaker_id=u.speaker_id,
+            conversation_id=u.conversation_id,
+            conversation=u.conversation,
+            speaker=u.speaker,
+            speaker_surname=u.speaker.surname if u.speaker else None,
+        )
+        for u in utterances
+    ]
+
+
+@router.get(
+    "/{conversation_id}/utterances/unknown-speakers", response_model=List[UtteranceDTO]
+)
+async def get_utterances_with_unknown_speakers(
+    session: SessionDep,
+    conversation_id: int,
+) -> List[UtteranceDTO]:
+    conversation = session.get(Conversation, conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    utterances = session.exec(
+        select(Utterance).where(
+            Utterance.conversation_id == conversation.id
+            and Utterance.speaker_id.is_(None)
+        )
+    ).all()
+
+    return [
+        UtteranceDTO(
+            id=u.id,
+            start_time=u.start_time,
+            end_time=u.end_time,
+            text=u.text,
+            speaker_id=u.speaker_id,
+            conversation_id=u.conversation_id,
+            conversation=u.conversation,
+            speaker=u.speaker,
+        )
+        for u in utterances
+    ]
 
 
 # @router.post("/audio", status_code=201)

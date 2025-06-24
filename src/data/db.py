@@ -43,6 +43,7 @@ def similarity_search(
 ) -> list[Utterance]:
     stmt = (
         select(Utterance)
+        .where(Utterance.embedding != None)
         .join(Speaker)
         .order_by(Utterance.embedding.cosine_distance(query_embedding))
     )

@@ -55,7 +55,6 @@ async def add_conversation_with_speakers(
     return conversation
 
 
-
 # @router.post("/audio", status_code=201)
 # async def add_audio_converstaion_to_tasks(
 #     session: SessionDep,
@@ -157,7 +156,13 @@ async def get_similarity_search(
 ):
     query_embedding = get_embeddings([query]).embeddings[0].values
     results = similarity_search(
-        query_embedding, limit, speaker_id, conversation_id, start_date, end_date, session
+        query_embedding,
+        limit,
+        speaker_id,
+        conversation_id,
+        start_date,
+        end_date,
+        session,
     )
 
     return [
@@ -188,7 +193,14 @@ async def get_full_text(
     end_date: Optional[date] = None,
 ):
     results = full_text_search(
-        query, limit, language, speaker_id, conversation_id, start_date, end_date, session
+        query,
+        limit,
+        language,
+        speaker_id,
+        conversation_id,
+        start_date,
+        end_date,
+        session,
     )
 
     return [
@@ -262,12 +274,25 @@ async def get_hybrid_search(
     fetch_limit = limit * 2 if limit else 40
 
     fts_results = full_text_search(
-        query, fetch_limit, language, speaker_id, conversation_id, start_date, end_date, session
+        query,
+        fetch_limit,
+        language,
+        speaker_id,
+        conversation_id,
+        start_date,
+        end_date,
+        session,
     )
 
     query_embedding = get_embeddings([query]).embeddings[0].values
     sim_results = similarity_search(
-        query_embedding, fetch_limit, speaker_id, conversation_id, start_date, end_date, session
+        query_embedding,
+        fetch_limit,
+        speaker_id,
+        conversation_id,
+        start_date,
+        end_date,
+        session,
     )
     fused_scores = {}
     results_map = {}

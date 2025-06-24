@@ -1,12 +1,12 @@
 from google import genai
-from google.genai.types import EmbedContentConfig
+from google.genai.types import EmbedContentConfig, EmbedContentResponse
 
 from ..config import settings
 
 client = genai.Client(api_key=settings.GOOGLE_AI_STUDIO_API_KEY)
 
 
-def get_embeddings(content):
+def get_embeddings(content) -> EmbedContentResponse:
     response = client.models.embed_content(
         model="gemini-embedding-exp-03-07",
         contents=content,

@@ -39,7 +39,7 @@ class Utterance(SQLModel, table=True):
     start_time: float = Field()
     end_time: float = Field()
     text: str = Field()
-    embedding: Any = Field(sa_type=Vector(3072))
+    embedding: Any | None = Field(default=None, sa_type=Vector(3072))
 
     speaker_id: int | None = Field(default=None, foreign_key="speaker.id")
     speaker: Speaker | None = Relationship(back_populates="utterances")

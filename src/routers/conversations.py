@@ -236,7 +236,7 @@ async def delete_conversation(id: int, session: SessionDep):
 async def get_similarity_search(
     query: str,
     session: SessionDep,
-    limit: Optional[int] = None,
+    limit: Optional[int] = 20,
     speaker_id: Optional[int] = None,
     conversation_id: Optional[int] = None,
     start_date: Optional[date] = None,

@@ -19,7 +19,7 @@ def periodic_worker(stop_event: Event):
                 utterance.embedding = embeddings
                 session.add(utterance)
                 session.commit()
-                stop_event.wait(timeout=10)
+                stop_event.wait(timeout=2)
             except Exception as e:
                 stop_event.wait(timeout=60)
         else:

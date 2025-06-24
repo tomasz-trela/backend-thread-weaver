@@ -29,8 +29,11 @@ def create_conversation(
     status: Optional[ConversationStatus] = None,
     youtube_url: Optional[str] = None,
 ) -> Conversation:
-    # if youtube_url:
-    #     status = ConversationStatus.pending
+   
+    if youtube_url and status is None:
+        status = ConversationStatus.pending
+
+    
 
     conversation = Conversation(
         title=name.strip(),

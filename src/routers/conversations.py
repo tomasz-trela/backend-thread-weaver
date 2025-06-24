@@ -30,6 +30,13 @@ from ..typedefs import SessionDep
 router = APIRouter(prefix="/conversations", tags=["Conversations"])
 
 
+@router.get("/")
+async def get_conversations(session: SessionDep) -> list[Conversation]:
+    stmt = select(Conversation)
+    conversations = session.exec(stmt).all()
+    return conversations
+
+
 @router.post("/")
 async def add_conversation_with_speakers(
     session: SessionDep,
@@ -46,6 +53,7 @@ async def add_conversation_with_speakers(
     )
 
     return conversation
+
 
 
 # @router.post("/audio", status_code=201)
@@ -143,12 +151,13 @@ async def get_similarity_search(
     session: SessionDep,
     limit: Optional[int] = None,
     speaker_id: Optional[int] = None,
+    conversation_id: Optional[int] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
 ):
     query_embedding = get_embeddings([query]).embeddings[0].values
     results = similarity_search(
-        query_embedding, limit, speaker_id, start_date, end_date, session
+        query_embedding, limit, speaker_id, conversation_id, start_date, end_date, session
     )
 
     return [
@@ -174,11 +183,12 @@ async def get_full_text(
     limit: Optional[int] = 20,
     language: Optional[str] = "simple",
     speaker_id: Optional[int] = None,
+    conversation_id: Optional[int] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
 ):
     results = full_text_search(
-        query, limit, language, speaker_id, start_date, end_date, session
+        query, limit, language, speaker_id, conversation_id, start_date, end_date, session
     )
 
     return [
@@ -223,6 +233,7 @@ async def get_hybrid_search(
     session: SessionDep,
     limit: Optional[int] = 20,
     speaker_id: Optional[int] = None,
+    conversation_id: Optional[int] = None,
     language: Optional[str] = "simple",
     rrf_k: int = 60,
     start_date: Optional[date] = None,
@@ -251,12 +262,12 @@ async def get_hybrid_search(
     fetch_limit = limit * 2 if limit else 40
 
     fts_results = full_text_search(
-        query, fetch_limit, language, speaker_id, start_date, end_date, session
+        query, fetch_limit, language, speaker_id, conversation_id, start_date, end_date, session
     )
 
     query_embedding = get_embeddings([query]).embeddings[0].values
     sim_results = similarity_search(
-        query_embedding, fetch_limit, speaker_id, start_date, end_date, session
+        query_embedding, fetch_limit, speaker_id, conversation_id, start_date, end_date, session
     )
     fused_scores = {}
     results_map = {}

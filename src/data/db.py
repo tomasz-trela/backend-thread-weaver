@@ -36,6 +36,7 @@ def similarity_search(
     query_embedding: list[float],
     limit: int,
     speaker_id: int,
+    conversation_id: int,
     start_date: datetime.date,
     end_date: datetime.date,
     session: Session,
@@ -55,6 +56,9 @@ def similarity_search(
     if speaker_id is not None:
         stmt = stmt.where(Utterance.speaker_id == speaker_id)
 
+    if conversation_id is not None:
+        stmt = stmt.where(Utterance.conversation_id == conversation_id)
+
     if limit is not None:
         stmt = stmt.limit(limit)
 
@@ -67,6 +71,7 @@ def full_text_search(
     limit: int,
     language: str,
     speaker_id: int,
+    conversation_id: int,
     start_date: datetime.date,
     end_date: datetime.date,
     session: Session,
@@ -100,6 +105,9 @@ def full_text_search(
 
     if speaker_id is not None:
         stmt = stmt.where(Utterance.speaker_id == speaker_id)
+
+    if conversation_id is not None:
+        stmt = stmt.where(Utterance.conversation_id == conversation_id)
 
     if limit is not None:
         stmt = stmt.limit(limit)

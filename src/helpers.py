@@ -86,11 +86,15 @@ async def process_and_save_utterances(
             )
 
     tasks = [process_segment(segment) for segment in segments]
-    utterances = await asyncio.gather(*tasks)
+    utterances = await asyncio.gather(*tasks, return_exceptions=True)
+    for utterance in utterances:
+        if isinstance(utterance, Utterance):
+            session.add(utterance)
+        else:
+            # Handle exceptions that occurred during processing
+            print(f"Error processing segment: {utterance}")
 
-    if utterances:
-        session.add_all(utterances)
-        session.commit()
+    session.commit()
 
 
 async def create_conversation_from_audio(

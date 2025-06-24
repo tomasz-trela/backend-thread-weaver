@@ -40,7 +40,7 @@ async def process_and_save_utterances_without_speakers(
 
     session.add_all(speakers)
     session.commit()
-    session.refresh(speakers)
+    # session.refresh(speakers)
 
     segments = get_segments(speaker_data, whisper_data)
     if limit:
@@ -67,12 +67,15 @@ async def process_and_save_utterances_without_speakers(
             )
 
     tasks = [process_segment(segment) for segment in segments]
-    utterances = await asyncio.gather(*tasks)
+    utterances = await asyncio.gather(*tasks, return_exceptions=True)
+    for utterance in utterances:
+        if isinstance(utterance, Utterance):
+            session.add(utterance)
+        else:
+            # Handle exceptions that occurred during processing
+            print(f"Error processing segment: {utterance}")
 
-    if utterances:
-        session.add_all(utterances)
-        session.commit()
-
+    session.commit()
 
 def periodic_worker(session: Session, yt_dlp: YoutubeDL, stop_event: Event):
     while not stop_event.is_set():

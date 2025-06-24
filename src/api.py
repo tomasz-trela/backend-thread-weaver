@@ -29,25 +29,25 @@ async def lifespan(app: FastAPI):
 
     stop_event = threading.Event()
 
-    # conversations_worker_thread = threading.Thread(
-    #     target=conversations_periodic_worker.periodic_worker,
-    #     args=(session, yt_dlp, stop_event),
-    #     daemon=True,
-    # )
+    conversations_worker_thread = threading.Thread(
+        target=conversations_periodic_worker.periodic_worker,
+        args=(session, yt_dlp, stop_event),
+        daemon=True,
+    )
     utterances_worker_thread = threading.Thread(
         target=utterances_periodic_worker.periodic_worker,
         args=(session, stop_event),
         daemon=True,
     )
 
-    # conversations_worker_thread.start()
+    conversations_worker_thread.start()
     utterances_worker_thread.start()
 
     try:
         yield
     finally:
         stop_event.set()
-        # conversations_worker_thread.join()
+        conversations_worker_thread.join()
         utterances_worker_thread.join()
 
         try:

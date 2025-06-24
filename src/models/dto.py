@@ -17,6 +17,13 @@ class UtteranceDTO(BaseModel):
     speaker: Optional[Speaker]
 
 
+class UtteranceUpdateRequest(BaseModel):
+    start_time: Optional[float] = None
+    end_time: Optional[float] = None
+    text: Optional[str] = None
+    speaker_id: Optional[int] = None
+
+
 class ConversationUpdateRequest(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
@@ -29,12 +36,11 @@ class ConversationUpdateRequest(BaseModel):
 
 class ConversationCreateRequest(BaseModel):
     title: str
-    description: str = None
+    description: str
     youtube_id: Optional[str] = None
     video_filename: Optional[str] = None
     conversation_date: Optional[date] = None
     youtube_url: Optional[str] = None
-    status: Optional[ConversationStatus] = None
 
 
 class SpeakerUpdateRequest(BaseModel):

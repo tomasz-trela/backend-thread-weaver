@@ -14,6 +14,7 @@ from ..helpers import (
 from ..models.dto import (
     ConversationCreateRequest,
     ConversationUpdateRequest,
+    SpeakerUpdateRequest,
     UtteranceDTO,
 )
 from ..data.googleapi import get_embeddings
@@ -38,7 +39,7 @@ async def get_conversations(session: SessionDep) -> list[Conversation]:
 
 
 @router.post("/")
-async def add_conversation_with_speakers(
+async def add_conversation(
     session: SessionDep,
     data: ConversationCreateRequest,
 ) -> Conversation:
@@ -48,11 +49,29 @@ async def add_conversation_with_speakers(
         description=data.description,
         youtube_id=data.youtube_id,
         conversation_date=data.conversation_date,
-        status=data.status,
         youtube_url=data.youtube_url,
     )
 
     return conversation
+
+
+@router.get("/{id}/speakers")
+async def get_speakers(session: SessionDep) -> List[Speaker]:
+    conversation = session.get(Conversation, id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    speakers = session.exec(
+        select(Speaker).where(
+            Speaker.id.in_(
+                select(Utterance.speaker_id)
+                .where(Utterance.conversation_id == conversation.id)
+                .distinct()
+            )
+        )
+    ).all()
+
+    return speakers
 
 
 # @router.post("/audio", status_code=201)

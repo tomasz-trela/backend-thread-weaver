@@ -3,7 +3,7 @@ from typing import Any, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, UploadFile
 
-from sqlmodel import delete, select
+from sqlmodel import and_, delete, select
 
 from ..helpers import (
     create_conversation,
@@ -75,6 +75,7 @@ async def get_speakers(id: int, session: SessionDep) -> List[Speaker]:
 
 @router.get("/{id}/uterances")
 async def get_utterances(
+    id: int,
     session: SessionDep,
     speaker_id: Optional[int] = None,
 ):
@@ -106,7 +107,7 @@ async def get_utterances(
 
 
 @router.get(
-    "/{conversation_id}/utterances/unknown-speakers", response_model=List[UtteranceDTO]
+    "/{conversation_id}/unknown-speakers/utterances", response_model=List[UtteranceDTO]
 )
 async def get_utterances_with_unknown_speakers(
     session: SessionDep,
@@ -118,8 +119,10 @@ async def get_utterances_with_unknown_speakers(
 
     utterances = session.exec(
         select(Utterance).where(
-            Utterance.conversation_id == conversation.id
-            and Utterance.speaker_id.is_(None)
+            and_(
+                Utterance.conversation_id == conversation.id,
+                Utterance.speaker_id == None,
+            )
         )
     ).all()
 
@@ -302,26 +305,6 @@ async def get_full_text(
     ]
 
 
-@router.get("/{conversation_id}/speakers")
-async def get_speakers(conversation_id: int, session: SessionDep) -> Any:
-    conversation = session.get(Conversation, conversation_id)
-    if not conversation:
-        return {"error": "Conversation not found"}
-
-    speakers = session.exec(
-        select(Speaker).where(
-            Speaker.id.in_(
-                select(Utterance.speaker_id)
-                .where(Utterance.speaker_id != None)
-                .where(Utterance.conversation_id == conversation.id)
-                .distinct()
-            )
-        )
-    ).all()
-
-    return speakers
-
-
 @router.get("/hybrid-search", response_model=list[UtteranceDTO])
 async def get_hybrid_search(
     query: str,
@@ -413,35 +396,4 @@ async def get_hybrid_search(
             speaker_surname=u.speaker.surname if u.speaker else None,
         )
         for u in final_limited_results
-    ]
-
-
-@router.get("/{conversation_id}/utterances", response_model=list[UtteranceDTO])
-async def get_utterances(
-    conversation_id: int,
-    session: SessionDep,
-) -> list[UtteranceDTO]:
-    conversation = session.get(Conversation, conversation_id)
-    if not conversation:
-        raise HTTPException(status_code=404, detail="Conversation not found")
-
-    utterances = session.exec(
-        select(Utterance)
-        .where(Utterance.conversation_id == conversation.id)
-        .order_by(Utterance.start_time)
-    ).all()
-
-    return [
-        UtteranceDTO(
-            id=u.id,
-            start_time=u.start_time,
-            end_time=u.end_time,
-            text=u.text,
-            speaker_id=u.speaker_id,
-            conversation_id=u.conversation_id,
-            conversation=u.conversation,
-            speaker=u.speaker,
-            speaker_surname=u.speaker.surname if u.speaker else None,
-        )
-        for u in utterances
     ]

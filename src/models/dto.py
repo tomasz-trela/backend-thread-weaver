@@ -10,11 +10,11 @@ class UtteranceDTO(BaseModel):
     start_time: float
     end_time: float
     text: str
-    speaker_id: Optional[int]
     conversation_id: int
     conversation: Conversation
-    speaker_surname: Optional[str]
-    speaker: Optional[Speaker]
+    speaker_id: Optional[int] = None
+    speaker_surname: Optional[str] = None
+    speaker: Optional[Speaker] = None
 
 
 class UtteranceUpdateRequest(BaseModel):

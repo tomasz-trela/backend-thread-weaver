@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from sqlmodel import select
+from sqlmodel import and_, select
 
 from src.data.entities import Utterance
 from src.models.dto import UtteranceUpdateRequest
@@ -11,6 +11,7 @@ router = APIRouter(prefix="/utterances", tags=["Utterances"])
 
 @router.get("/{id}")
 async def get_utterances_by_id(
+    id: int,
     session: SessionDep,
 ):
     utterances = session.exec(select(Utterance).where(Utterance.id == id)).all()
@@ -25,6 +26,7 @@ async def get_utterances_by_id(
 
 @router.put("/{id}")
 async def update_utterances(
+    id: int,
     session: SessionDep,
     utterance_data: UtteranceUpdateRequest,
 ):
@@ -45,14 +47,20 @@ async def update_utterances(
     return {"message": "Utterances updated successfully"}
 
 
-@router.put("/{id}/speaker/{speaker_id}")
+@router.put("/speaker/{speaker_id}")
 async def update_speaker_in_utterances(
     conversation_id: int,
     session: SessionDep,
     speaker_id: int,
+    speaker_changed_id: int,
 ):
     utterances = session.exec(
-        select(Utterance).where(Utterance.conversation_id == conversation_id)
+        select(Utterance).where(
+            and_(
+                Utterance.conversation_id == conversation_id,
+                Utterance.speaker_id == speaker_id,
+            )
+        )
     ).all()
 
     if not utterances:
@@ -61,7 +69,7 @@ async def update_speaker_in_utterances(
         )
 
     for utterance in utterances:
-        utterance.speaker_id = speaker_id
+        utterance.speaker_id = speaker_changed_id
 
     session.commit()
 
